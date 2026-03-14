@@ -1,9 +1,9 @@
 // Parser based on https://github.com/SecureAuthCorp/impacket.git
 
-package eseparser
+package parser
 
 import (
-	bytes2 "bytes"
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
@@ -12,7 +12,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/browserutils/kooky/internal/eseparser/ordereddict"
+	"github.com/browserutils/ese/ordereddict"
 )
 
 const (
@@ -311,21 +311,21 @@ func (self *Table) tagToRecord(value *Value, header *PageHeader) *ordereddict.Di
 			if pres {
 				switch column.Type {
 				case "Binary":
-					result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
-						return hex.EncodeToString(bytes)
+					result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
+						return hex.EncodeToString(dat)
 					}))
 
 				case "Long Binary":
-					parsedValue := self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
-						return hex.EncodeToString(bytes)
+					parsedValue := self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
+						return hex.EncodeToString(dat)
 					})
 					if parsedValue != nil {
 						result.Set(column.Name, parsedValue)
 					}
 
 				case "Long Text":
-					parsedValue := self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
-						return ParseLongText(bytes, column.CodePage)
+					parsedValue := self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
+						return ParseLongText(dat, column.CodePage)
 					})
 					if parsedValue != nil {
 						result.Set(column.Name, parsedValue)
@@ -333,73 +333,73 @@ func (self *Table) tagToRecord(value *Value, header *PageHeader) *ordereddict.Di
 
 				case "Boolean":
 					if column.SpaceUsage == 1 {
-						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
-							return bytes[0] > 0
+						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
+							return dat[0] > 0
 						}))
 					}
 
 				case "Signed byte":
 					if column.SpaceUsage == 1 {
-						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
-							return bytes[0]
+						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
+							return dat[0]
 						}))
 					}
 
 				case "Signed short":
 					if column.SpaceUsage == 2 {
-						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
-							return int16(binary.LittleEndian.Uint16(bytes))
+						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
+							return int16(binary.LittleEndian.Uint16(dat))
 						}))
 					}
 
 				case "Unsigned short":
 					if column.SpaceUsage == 2 {
-						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
-							return binary.LittleEndian.Uint16(bytes)
+						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
+							return binary.LittleEndian.Uint16(dat)
 						}))
 					}
 
 				case "Signed long":
 					if column.SpaceUsage == 4 {
-						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
-							return int32(binary.LittleEndian.Uint32(bytes))
+						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
+							return int32(binary.LittleEndian.Uint32(dat))
 						}))
 					}
 
 				case "Unsigned long":
 					if column.SpaceUsage == 4 {
-						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
-							return binary.LittleEndian.Uint32(bytes)
+						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
+							return binary.LittleEndian.Uint32(dat)
 						}))
 					}
 
 				case "Single precision FP":
 					if column.SpaceUsage == 4 {
-						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
-							return math.Float32frombits(binary.LittleEndian.Uint32(bytes))
+						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
+							return math.Float32frombits(binary.LittleEndian.Uint32(dat))
 						}))
 					}
 
 				case "Double precision FP":
 					if column.SpaceUsage == 8 {
-						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
-							return math.Float64frombits(binary.LittleEndian.Uint64(bytes))
+						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
+							return math.Float64frombits(binary.LittleEndian.Uint64(dat))
 						}))
 					}
 
 				case "DateTime":
 					if column.SpaceUsage == 8 {
-						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
+						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
 							switch column.Flags {
 							case 1:
 								// A more modern way of encoding
-								return WinFileTime64Bin(bytes)
+								return WinFileTime64Bin(dat)
 
 							case 0:
 								// Some hair brained time serialization method
 								// https://docs.microsoft.com/en-us/windows/win32/extensible-storage-engine/jet-coltyp
 
-								value_int := binary.LittleEndian.Uint64(bytes)
+								value_int := binary.LittleEndian.Uint64(dat)
 								days_since_1900 := math.Float64frombits(value_int)
 
 								// In python time.mktime((1900,1,1,0,0,0,0,365,0))
@@ -407,22 +407,22 @@ func (self *Table) tagToRecord(value *Value, header *PageHeader) *ordereddict.Di
 									-2208988800, 0).UTC()
 							default:
 								// We have no idea
-								return binary.LittleEndian.Uint64(bytes)
+								return binary.LittleEndian.Uint64(dat)
 							}
 						}))
 					}
 
 				case "Long long", "Currency":
 					if column.SpaceUsage == 8 {
-						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
-							return binary.LittleEndian.Uint64(bytes)
+						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
+							return binary.LittleEndian.Uint64(dat)
 						}))
 					}
 
 				case "GUID":
 					if column.SpaceUsage == 16 {
-						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(bytes []byte) any {
-							return self.Header.Profile.GUID(bytes2.NewReader(bytes), 0).AsString()
+						result.Set(column.Name, self.ParseTaggedValueWithPrimitiveDecoder(self.ctx, buf, func(dat []byte) any {
+							return self.Header.Profile.GUID(bytes.NewReader(dat), 0).AsString()
 						}))
 					}
 

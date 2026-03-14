@@ -1,4 +1,4 @@
-package eseparser
+package parser
 
 import (
 	"fmt"
